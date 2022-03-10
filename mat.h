@@ -17,7 +17,7 @@ public:
         matrix = new float[row * column];
         for (int i = 0; i < row; i++){
             for (int j = 0; j < column; j++){
-                matrix[i * column + j] = 1.0;
+                matrix[i * column + j] = i+1;
             }
         }
     }
@@ -45,7 +45,8 @@ public:
     // Operators 
     void add(const Mat &m);
     void sub(const Mat &m);
-    Mat mul(const Mat &m);
+    void mul(const Mat &m);
+
     Mat& operator= (const Mat &m){
         if (&m == this)
             return *this;
@@ -73,6 +74,15 @@ public:
     Mat operator- (const Mat &m) const {
         Mat temp(*this);
         temp -= m;
+        return temp;
+    }
+    Mat& operator*= (const Mat &m){
+        this->mul(m);
+        return (*this);
+    }
+    Mat operator* (const Mat &m){
+        Mat temp(*this);
+        temp *= m;
         return temp;
     }
 
