@@ -26,6 +26,13 @@ __global__ void cuda_mul(const float* a, const float* b, float* result, const in
     result[i * row + j] = tmpValue;
 }
 
+__global__ void cuda_mul_shared(const float* a, const float* b, float* result, const int row, const int column)
+{
+    __shared__ float Mds[1][1];
+    __shared__ float Nds[1][1];
+
+}
+
 void Mat::add(const Mat& m){
     dimensionCheck(m);
     CUDA_CHECK(cudaSetDevice(DEVICE));
@@ -114,3 +121,19 @@ void Mat::copy(const Mat &m){
     CUDA_CHECK(cudaMemcpy(matrix, d_tmp, bytesize, cudaMemcpyDeviceToHost));
     CUDA_CHECK(cudaFree(d_tmp));
 }
+
+void Mat::information(bool verbose){
+    cudaDeviceProp prop;
+    CUDA_CHECK(cudaGetDeviceProperties(&prop, DEVICE));
+    maxThreadsPerBlock = prop.maxThreadsPerBlock;
+    maxThreadsPerMultiProcessor = prop.maxThreadsPerMultiProcessor;
+    if (verbose){
+        printf("Name: %s\n", prop.name);
+        printf("sharedMemPerBlock: %lu kB\n", prop.sharedMemPerBlock / 1024lu); // in byte
+        printf("warpSize: %d threads\n", prop.warpSize);
+        printf("maxThreadsPerBlock: %d\n", maxThreadsPerBlock);
+        printf("maxThreadsPerMultiProcessor: %d\n", prop.maxThreadsPerMultiProcessor);
+        printf("maxThreadsDim: %d, %d, %d\n", prop.maxThreadsDim[0], prop.maxThreadsDim[1], prop.maxThreadsDim[2]);
+    }
+}
+    

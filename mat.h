@@ -11,9 +11,11 @@ __global__ void cuda_add(float* a, const float* b, const int column);
 class Mat{
 public:
     Mat(): row(0), column(0){
+        information();
         matrix = new float[0];
     }
     Mat(int m, int n): row(m), column(n){
+        information();
         matrix = new float[row * column];
         for (int i = 0; i < row; i++){
             for (int j = 0; j < column; j++){
@@ -22,6 +24,7 @@ public:
         }
     }
     Mat(const Mat& m){ 
+        information();
         row = m.get_row();
         column = m.get_column();
         copy(m); } // cuda copy
@@ -90,6 +93,8 @@ private:
     float* matrix;
     int row;
     int column;
+    int maxThreadsPerBlock;
+    int maxThreadsPerMultiProcessor;
     void copy(const Mat &m);
     void dimensionCheck(const Mat &m){
         if (row != m.get_row() || column != m.get_column()){
@@ -97,6 +102,7 @@ private:
             exit(-1);
         }
     }
+    void information(bool verbose=false);
 };
 
 
