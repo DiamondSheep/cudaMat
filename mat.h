@@ -3,47 +3,34 @@
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
+#include <vector>
 #include "cuda_utils.h"
 
+namespace cunn{
 const int DEVICE = 0;
-__global__ void cuda_add(float* a, const float* b, const int column);
+__global__ void cuda_add(float* a, const float* b, const int height);
 
 class Mat{
 public:
-    Mat(): row(0), column(0){
-        information();
-        matrix = new float[0];
-    }
-    Mat(int m, int n): row(m), column(n){
-        information();
-        matrix = new float[row * column];
-        for (int i = 0; i < row; i++){
-            for (int j = 0; j < column; j++){
-                matrix[i * column + j] = i+1;
-            }
-        }
-    }
-    Mat(const Mat& m){ 
-        information();
-        row = m.get_row();
-        column = m.get_column();
-        copy(m); } // cuda copy
+    Mat();
+    Mat(int _w);
+    Mat(int _w, int _h);
+    Mat(int _w, int _h, int _c);
+    Mat(const Mat& _m);
     ~Mat(){ delete[] matrix; }
-    void display() const{
-        for (int i = 0; i < row; i++){
-            for (int j = 0; j < column; j++){
-                printf("%f\t", matrix[i * column + j]);
-            }
-            printf("\n");
-        }
-    }
+    void display() const;
 
-    int get_row() const{ return row; }
-    int get_column() const{ return column; }
+    int get_width() const{ return width; }
+    int get_height() const{ return height; }
+    int get_channel() const {return channel; }
+
     const float* get_mat() const { return matrix; }
+    std::vector<int> size() const { return {width, height, channel}; }
+    int get_elemsize() const { return width * height * channel; }
+    int get_dims() const { }
 
     friend std::ostream& operator << (std::ostream& os, const Mat &m) {
-        return os << "Matrix of " << m.row << " row, " << m.column << " column.";
+        return os << "Matrix of " << m.width << " width, " << m.height << " height.";
     }
     // Operators 
     void add(const Mat &m);
@@ -54,10 +41,10 @@ public:
         if (&m == this)
             return *this;
         delete[] matrix; 
-        row = m.get_row();
-        column = m.get_column();
-        matrix = new float[row * column];
-        std::cout << row << ", " << column << std::endl;
+        width = m.get_width();
+        height = m.get_height();
+        matrix = new float[width * height];
+        std::cout << width << ", " << height << std::endl;
         copy(m);
         return (*this);
     }
@@ -89,21 +76,68 @@ public:
         return temp;
     }
 
-private:
     float* matrix;
-    int row;
-    int column;
+
+    int width;
+    int height;
+    int channel;
+    
+    int elemsize; // number of elements 
+    int dims;     // dimensions
+
+    int blocksize;
     int maxThreadsPerBlock;
-    int maxThreadsPerMultiProcessor;
+    int maxBlocksPerMultiProcessor;
+
     void copy(const Mat &m);
     void dimensionCheck(const Mat &m){
-        if (row != m.get_row() || column != m.get_column()){
-            std::cerr << "Matrix dimension error: (" << row << ", " << column << ") cannot match (" << m.get_row() << ", " << m.get_column() << ")" << std::endl;
+        if (width != m.get_width() || height != m.get_height()){
+            std::cerr << "Matrix dimension error: (" << width << ", " << height << ") cannot match (" << m.get_width() << ", " << m.get_height() << ")" << std::endl;
             exit(-1);
         }
     }
     void information(bool verbose=false);
 };
 
+// implement
+Mat::Mat(): 
+width(0), height(0), channel(0), elemsize(0), dims(0){
+    information();
+    matrix = new float[0];
+}
+Mat::Mat(int _w):
+width(_w), height(0), channel(0), elemsize(0), dims(0){
+    exit(-1);
+}
+Mat::Mat(int _w, int _h): 
+width(_w), height(_h), channel(0), elemsize(_w * _h), dims(2){
+    information();
+    matrix = new float[width * height];
+    for (int i = 0; i < width; i++){
+        for (int j = 0; j < height; j++){
+            matrix[i * height + j] = i+1;
+        }
+    }
+}
+Mat::Mat(int _w, int _h, int _c): 
+width(_w), height(_h), channel(_c), elemsize(_w * _h * _c), dims(3){
+    exit(-1);
+}
+Mat::Mat(const Mat& m){ 
+    information();
+    width = m.get_width();
+    height = m.get_height();
+    copy(m); // cuda copy
+} 
+void Mat::display() const{
+    for (int i = 0; i < width; i++){
+        for (int j = 0; j < height; j++){
+            printf("%f\t", matrix[i * height + j]);
+        }
+        printf("\n");
+    }
+}
+
+}
 
 #endif
