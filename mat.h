@@ -17,20 +17,25 @@ public:
     Mat(int _w, int _h);
     Mat(int _w, int _h, int _c);
     Mat(const Mat& _m);
-    ~Mat(){ delete[] matrix; }
-    void display() const;
+    ~Mat(){ delete[] data; }
+    void create();
+    void release();
 
     int get_width() const{ return width; }
     int get_height() const{ return height; }
     int get_channel() const {return channel; }
 
-    const float* get_mat() const { return matrix; }
-    std::vector<int> size() const { return {width, height, channel}; }
+    const float* get_mat() const { return data; }
+    int get_dims() const { return dims; }
     int get_elemsize() const { return width * height * channel; }
-    int get_dims() const { }
+    std::vector<int> size() const { return {width, height, channel}; }
+    void reshape(int _w);
+    void reshape(int _w, int _h);
+    void reshape(int _w, int _h, int _c);
+    
 
     friend std::ostream& operator << (std::ostream& os, const Mat &m) {
-        return os << "Matrix of " << m.width << " width, " << m.height << " height.";
+        return os << "(" << m.width << ", " << m.height << ", " << m.channel << ")";
     }
     // Operators 
     void add(const Mat &m);
@@ -40,11 +45,15 @@ public:
     Mat& operator= (const Mat &m){
         if (&m == this)
             return *this;
-        delete[] matrix; 
+        release();
+
         width = m.get_width();
         height = m.get_height();
-        matrix = new float[width * height];
-        std::cout << width << ", " << height << std::endl;
+        channel = m.get_channel();
+        dims = m.get_dims();
+        elemsize = m.elemsize;
+        
+        create();
         copy(m);
         return (*this);
     }
@@ -76,65 +85,62 @@ public:
         return temp;
     }
 
-    float* matrix;
+    // single-precision data
+    float* data = nullptr;
 
     int width;
     int height;
     int channel;
     
-    int elemsize; // number of elements 
+    size_t elemsize; // number of elements 
     int dims;     // dimensions
 
+    // TODO
     int blocksize;
-    int maxThreadsPerBlock;
-    int maxBlocksPerMultiProcessor;
+
+    static int maxThreadsPerBlock;
+    static int maxThreadsPerMultiProcessor;
 
     void copy(const Mat &m);
-    void dimensionCheck(const Mat &m){
-        if (width != m.get_width() || height != m.get_height()){
-            std::cerr << "Matrix dimension error: (" << width << ", " << height << ") cannot match (" << m.get_width() << ", " << m.get_height() << ")" << std::endl;
-            exit(-1);
-        }
-    }
+    void dimensionCheck(const Mat &m);
     void information(bool verbose=false);
 };
 
 // implement
-Mat::Mat(): 
+inline Mat::Mat(): 
 width(0), height(0), channel(0), elemsize(0), dims(0){
     information();
-    matrix = new float[0];
+    create();
 }
-Mat::Mat(int _w):
-width(_w), height(0), channel(0), elemsize(0), dims(0){
-    exit(-1);
-}
-Mat::Mat(int _w, int _h): 
-width(_w), height(_h), channel(0), elemsize(_w * _h), dims(2){
+inline Mat::Mat(int _w):
+width(_w), height(1), channel(1), elemsize(_w), dims(1){
     information();
-    matrix = new float[width * height];
-    for (int i = 0; i < width; i++){
-        for (int j = 0; j < height; j++){
-            matrix[i * height + j] = i+1;
-        }
-    }
+    create();
 }
-Mat::Mat(int _w, int _h, int _c): 
+inline Mat::Mat(int _w, int _h): 
+width(_w), height(_h), channel(1), elemsize(_w * _h), dims(2){
+    information();
+    create();
+}
+inline Mat::Mat(int _w, int _h, int _c): 
 width(_w), height(_h), channel(_c), elemsize(_w * _h * _c), dims(3){
-    exit(-1);
-}
-Mat::Mat(const Mat& m){ 
     information();
-    width = m.get_width();
-    height = m.get_height();
+    create();
+}
+inline Mat::Mat(const Mat& m):
+width(m.get_width()), height(m.get_height()), channel(m.get_channel()), elemsize(m.elemsize), dims(m.dims){ 
+    information();
     copy(m); // cuda copy
 } 
-void Mat::display() const{
-    for (int i = 0; i < width; i++){
-        for (int j = 0; j < height; j++){
-            printf("%f\t", matrix[i * height + j]);
-        }
-        printf("\n");
+
+inline void Mat::dimensionCheck(const Mat& m){
+    if (dims != 2 || m.dims != 2){
+        std::cerr << "Dimension Error: 2-dimension matrix supported only." << std::endl;
+        exit(-1);
+    }
+    if (width != m.get_width() || height != m.get_height()){
+        std::cerr << "Dimension Error: (" << width << ", " << height << ") cannot match (" << m.get_width() << ", " << m.get_height() << ")" << std::endl;
+        exit(-1);
     }
 }
 

@@ -5,6 +5,7 @@ project(demo LANGUAGES CXX CUDA)
 add_definitions(-std=c++11)
 add_definitions(-DAPI_EXPORTS)
 option(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
+option(TEST OFF)
 
 set(CMAKE_CUDA_ARCHITECTURES 61)
 
@@ -32,9 +33,15 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Ofast -g -Wfatal-error
 #target_link_libraries(cudalib nvinfer cudart)
 #set_target_properties(cudalib PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-cuda_add_executable(demo main.cpp mat.cu)
-set_property(TARGET demo PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+if (TEST)
+    message("testing ...")
+    cuda_add_executable(${CMAKE_PROJECT_NAME} test.cpp mat.cu)
+else()
+    message("running ...")
+    cuda_add_executable(${CMAKE_PROJECT_NAME} main.cpp mat.cu)
+endif()
+set_property(TARGET ${CMAKE_PROJECT_NAME} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
-target_link_libraries(demo cudart)
-target_link_libraries(demo nvinfer)
-#target_link_libraries(demo cudalib)
+target_link_libraries(${CMAKE_PROJECT_NAME} cudart)
+target_link_libraries(${CMAKE_PROJECT_NAME} nvinfer)
+#target_link_libraries(${CMAKE_PROJECT_NAME} cudalib)

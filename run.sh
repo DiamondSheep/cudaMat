@@ -1,3 +1,3 @@
 cd build 
-cmake .. && make
+cmake -DTEST=ON .. && make
 ./demo
